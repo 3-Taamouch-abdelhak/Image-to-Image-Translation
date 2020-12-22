@@ -5,7 +5,6 @@ from itertools import chain
 import torch
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
-import torchvision
 
 from config import *
 from horse2zebra import get_horse2zebra_loader
@@ -113,7 +112,7 @@ def train():
             G_loss = G_mse_loss_B2A + G_mse_loss_A2B + G_identity_loss_A + G_identity_loss_B + G_cycle_loss_ABA + G_cycle_loss_BAB
 
             # Back Propagation and Update #
-            G_loss.backward(retain_graph=True)
+            G_loss.backward()
             G_optim.step()
 
             #######################
@@ -129,6 +128,7 @@ def train():
             D_real_loss_A = criterion_Adversarial(prob_real_A, real_labels)
 
             # Fake Loss #
+            fake_A = G_B2A(real_B)
             prob_fake_A = D_A(fake_A.detach())
             fake_labels = torch.zeros(prob_fake_A.size()).to(device)
             D_fake_loss_A = criterion_Adversarial(prob_fake_A, fake_labels)
@@ -137,7 +137,7 @@ def train():
             D_loss_A = config.lambda_identity * (D_real_loss_A + D_fake_loss_A).mean()
 
             # Back propagation and Update #
-            D_loss_A.backward(retain_graph=True)
+            D_loss_A.backward()
             D_A_optim.step()
 
             ## Train Discriminator B ##
@@ -147,6 +147,7 @@ def train():
             loss_real_B = criterion_Adversarial(prob_real_B, real_labels)
 
             # Fake Loss #
+            fake_B = G_A2B(real_A)
             prob_fake_B = D_B(fake_B.detach())
             fake_labels = torch.zeros(prob_fake_B.size()).to(device)
             loss_fake_B = criterion_Adversarial(prob_fake_B, fake_labels)
@@ -155,7 +156,7 @@ def train():
             D_loss_B = config.lambda_identity * (loss_real_B + loss_fake_B).mean()
 
             # Back propagation and Update #
-            D_loss_B.backward(retain_graph=True)
+            D_loss_B.backward()
             D_B_optim.step()
 
             # Add items to Lists #
